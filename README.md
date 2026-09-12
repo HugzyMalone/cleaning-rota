@@ -19,28 +19,15 @@ Three people, three rooms, so it cycles every three weeks and nobody can end up 
 
 It's worked out from the date, not stored anywhere, so it keeps going forever. Tap a name to swap rooms with someone — that applies to **that week only**.
 
-## Setup (once)
+## Setup
 
-### 1. Create the database
+Already done — the app is live and syncing. For reference:
 
-1. Sign up at [supabase.com](https://supabase.com) (free, GitHub login works) and create a project — any name, any region near the UK.
-2. Open **SQL Editor** → New query → paste all of [`supabase/schema.sql`](supabase/schema.sql) → **Run**.
-3. Go to **Project Settings → API** and copy the **Project URL** and the **anon public** key.
+- **Database:** Supabase project `cleaning-rota` (region `eu-west-2`, London). Tables, access policies and realtime all come from [`supabase/schema.sql`](supabase/schema.sql), which is safe to re-run.
+- **Keys:** the project URL and anon key live in [`config.js`](config.js). The anon key is public by design — that's what lets the housemates in without logins.
+- **Hosting:** GitHub Pages off `main`. Push and it redeploys in about a minute.
 
-### 2. Point the app at it
-
-Put those two values in [`config.js`](config.js):
-
-```js
-export const SUPABASE_URL = "https://xxxxxxxx.supabase.co";
-export const SUPABASE_ANON_KEY = "eyJhbGciOi…";
-```
-
-Commit and push — GitHub Pages redeploys in about a minute.
-
-### 3. Share it
-
-Send the link to your housemates. On a phone: **Share → Add to Home Screen** gives it an icon and opens it fullscreen like an app.
+To share it: send the link. On a phone, **Share → Add to Home Screen** gives it an icon and opens fullscreen like an app.
 
 ## Changing things
 
