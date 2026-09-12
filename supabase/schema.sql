@@ -16,8 +16,12 @@ create table if not exists tasks (
   room_id     text not null references rooms(id) on delete cascade,
   label       text not null,
   sort_order  int  not null default 0,
+  points      int  not null default 2,   -- effort weighting, used for scores
   archived    boolean not null default false
 );
+
+-- for databases created before points existed
+alter table tasks add column if not exists points int not null default 2;
 
 create table if not exists ticks (
   week_start  date not null,
@@ -89,20 +93,21 @@ insert into rooms (id, name, emoji, sort_order) values
   ('living',   'Living room', '🛋️', 2)
 on conflict (id) do nothing;
 
-insert into tasks (room_id, label, sort_order)
-select v.room_id, v.label, v.sort_order
+-- points are weighted by effort, so the light room can't out-earn the heavy one
+insert into tasks (room_id, label, sort_order, points)
+select v.room_id, v.label, v.sort_order, v.points
 from (values
-  ('kitchen',  'Wipe countertops',       0),
-  ('kitchen',  'Clean the hob',          1),
-  ('kitchen',  'Clean the sink',         2),
-  ('kitchen',  'Hoover the floor',       3),
-  ('kitchen',  'Mop the floor',          4),
-  ('bathroom', 'Clean the toilet',       0),
-  ('bathroom', 'Clean the sink',         1),
-  ('bathroom', 'Clean the bath',         2),
-  ('bathroom', 'Hoover the floor',       3),
-  ('bathroom', 'Mop the floor',          4),
-  ('living',   'Hoover the floor',       0),
-  ('living',   'Clean the coffee table', 1)
-) as v(room_id, label, sort_order)
+  ('kitchen',  'Wipe countertops',       0, 2),
+  ('kitchen',  'Clean the hob',          1, 3),
+  ('kitchen',  'Clean the sink',         2, 2),
+  ('kitchen',  'Hoover the floor',       3, 3),
+  ('kitchen',  'Mop the floor',          4, 4),
+  ('bathroom', 'Clean the toilet',       0, 3),
+  ('bathroom', 'Clean the sink',         1, 2),
+  ('bathroom', 'Clean the bath',         2, 4),
+  ('bathroom', 'Hoover the floor',       3, 2),
+  ('bathroom', 'Mop the floor',          4, 3),
+  ('living',   'Hoover the floor',       0, 3),
+  ('living',   'Clean the coffee table', 1, 2)
+) as v(room_id, label, sort_order, points)
 where not exists (select 1 from tasks);
