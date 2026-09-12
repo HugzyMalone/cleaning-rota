@@ -1,5 +1,7 @@
 # Flat Cleaning Rota
 
+**Live: https://hugzymalone.github.io/cleaning-rota/**
+
 A one-page rota for three housemates. Open the link on your phone, tick things off as you do them, everyone sees it live. No accounts, no app to install.
 
 **Rooms:** kitchen, bathroom, living room · **Start:** Monday 14 September 2026 · **Week:** Monday to Sunday, do it whenever suits.
