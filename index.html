@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Flat Cleaning Rota</title>
+<meta name="description" content="Who's cleaning what this week.">
+<meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15161a" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rota">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="weeknav">
+    <button class="stepper" id="prev-week" type="button" aria-label="Previous week">&lsaquo;</button>
+    <div class="weeklabel">
+      <h1 id="week-title">Loading…</h1>
+      <p id="week-sub"></p>
+    </div>
+    <button class="stepper" id="next-week" type="button" aria-label="Next week">&rsaquo;</button>
+  </div>
+  <button class="today-btn" id="today-btn" type="button" hidden>Back to this week</button>
+</header>
+
+<main>
+  <section class="whoami" id="whoami" aria-label="Who are you?">
+    <span class="whoami-label">You are</span>
+    <div class="people" id="people-picker"></div>
+  </section>
+
+  <section id="rooms" class="rooms" aria-label="Rooms this week"></section>
+
+  <section class="history" aria-labelledby="history-title">
+    <h2 id="history-title">Recent weeks</h2>
+    <div id="history" class="history-rows"></div>
+  </section>
+
+  <footer class="foot">
+    <span id="sync-status" class="sync">Connecting…</span>
+    <span class="dot">·</span>
+    <span>Rota started Mon 14 Sep 2026</span>
+  </footer>
+</main>
+
+<div id="sheet-backdrop" class="backdrop" hidden></div>
+<div id="sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
+  <div class="sheet-grip"></div>
+  <h2 id="sheet-title">Swap</h2>
+  <div id="sheet-body"></div>
+  <button class="sheet-close" id="sheet-close" type="button">Cancel</button>
+</div>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>
