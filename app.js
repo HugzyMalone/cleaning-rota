@@ -310,7 +310,7 @@ function roomArt(roomId) {
     : `<svg aria-hidden="true"><use href="#${roomIcon(roomId)}"/></svg>`;
 }
 function ring(done, total) {
-  return `<span class="room-count">${done}/${total}</span>`;
+  return `<span class="room-count"><strong>${done}/${total}</strong><small>tasks</small></span>`;
 }
 
 function tickMeta(tick) {
@@ -570,7 +570,7 @@ function paintRoom(roomId) {
   const complete = total > 0 && done === total;
   const wasComplete = card.classList.contains("complete");
 
-  card.querySelector(".room-count").textContent = `${done}/${total}`;
+  card.querySelector(".room-count strong").textContent = `${done}/${total}`;
 
   card.classList.toggle("complete", complete);
   card.querySelector(".badge.done").hidden = !complete;

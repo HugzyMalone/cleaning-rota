@@ -831,6 +831,8 @@ body::before { display: none; }
   color: var(--ink-2);
 }
 .room-count { font-size: 13px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.room-count { display: grid; text-align: center; line-height: 1.15; }
+.room-count small { font-size: 10px; font-weight: 600; color: var(--ink-3); }
 .room-expand .chev { width: 16px; }
 .room.open .chev { transform: rotate(90deg); }
 .tile { width: 58px; height: 58px; }
