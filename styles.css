@@ -895,3 +895,13 @@ details[open] > .section-summary { border-radius: 7px 7px 0 0; }
 @media (max-width: 400px) {
   .room-help { margin-left: 9px; }
 }
+
+.points-edit {
+  flex: none; display: flex; align-items: center; gap: 3px;
+  font-size: 12px; font-weight: 700; color: var(--ink-2);
+}
+.points-edit input {
+  width: 46px; min-width: 0; flex: none;
+  padding: 8px 3px; text-align: center;
+  font-size: 15px; font-variant-numeric: tabular-nums;
+}

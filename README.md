@@ -34,6 +34,7 @@ To share it: send the link. On a phone, **Share → Add to Home Screen** gives i
 | What | Where |
 |---|---|
 | Tasks (add, rename, delete) | In the app — expand a room, tap **Edit tasks** |
+| Points for each task | In the app — expand a room, tap **Edit tasks**, then change its **pts** number (1–20) |
 | Who lives here | `PEOPLE` in `config.js` |
 | Start date | `START_MONDAY` in `config.js` (must be a Monday) |
 | Room names and emoji | The `rooms` table in Supabase |
@@ -50,3 +51,4 @@ python3 -m http.server 8000
 - **Without Supabase configured** the app still works, but saves only to that one device — the footer says so.
 - The anon key being public is how Supabase is designed to work, but it does mean anyone with the link can tick a box. Fine for a cleaning rota; if it ever matters, add a shared passphrase gate.
 - Ticks are stored per week, so old weeks stay intact and you can look back at who actually did what.
+- Choose your name before ticking a task. The person who did the work gets the task points. Helping with at least one task in somebody else's room earns 3 extra points once per room per week. The assigned person's room still counts as complete when their housemates help finish it.

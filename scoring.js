@@ -5,6 +5,7 @@
    =========================================================================== */
 
 export const DEFAULT_POINTS = 2;
+export const HELP_BONUS_POINTS = 3;
 
 export function pointsOf(task) {
   const p = Number(task && task.points);
@@ -15,12 +16,34 @@ export function pointsOf(task) {
 export function personTotals(ctx) {
   const byId = new Map(ctx.tasks.map((t) => [t.id, t]));
   const totals = {};
+  const weeks = new Set();
   for (const person of ctx.people) totals[person] = 0;
-  for (const tick of Object.values(ctx.ticks)) {
+  for (const [key, tick] of Object.entries(ctx.ticks)) {
+    weeks.add(key.slice(0, 10));
     const task = byId.get(tick.task_id);
-    if (task && tick.by_name in totals) totals[tick.by_name] += pointsOf(task);
+    if (task && Object.hasOwn(totals, tick.by_name)) totals[tick.by_name] += pointsOf(task);
+  }
+  for (const week of weeks) {
+    const bonuses = helperBonusesForWeek(ctx, week);
+    for (const person of ctx.people) totals[person] += bonuses[person];
   }
   return totals;
+}
+
+/** One help bonus per room, per week, for each person who helped there. */
+export function helperBonusesForWeek(ctx, week) {
+  const bonuses = Object.fromEntries(ctx.people.map((person) => [person, 0]));
+  const assignments = ctx.assignmentsFor(week);
+  for (const room of ctx.rooms) {
+    const assigned = assignments[room.id];
+    const helpers = new Set();
+    for (const task of ctx.tasksIn(room.id)) {
+      const who = ctx.ticks[ctx.tickKey(week, task.id)]?.by_name;
+      if (Object.hasOwn(bonuses, who) && who !== assigned) helpers.add(who);
+    }
+    for (const name of helpers) bonuses[name] += HELP_BONUS_POINTS;
+  }
+  return bonuses;
 }
 
 /** Whoever is ahead — null while everyone is still on nothing. */
@@ -65,7 +88,9 @@ export function weekPoints(ctx, week) {
   for (const person of ctx.people) out[person] = 0;
   for (const task of ctx.tasks) {
     const tick = ctx.ticks[ctx.tickKey(week, task.id)];
-    if (tick && tick.by_name in out) out[tick.by_name] += pointsOf(byId.get(task.id));
+    if (tick && Object.hasOwn(out, tick.by_name)) out[tick.by_name] += pointsOf(byId.get(task.id));
   }
+  const bonuses = helperBonusesForWeek(ctx, week);
+  for (const person of ctx.people) out[person] += bonuses[person];
   return out;
 }

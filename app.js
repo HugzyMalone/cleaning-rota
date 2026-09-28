@@ -1,5 +1,5 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY, PEOPLE, START_MONDAY } from "./config.js";
-import { pointsOf, personTotals, leader, streak } from "./scoring.js";
+import { pointsOf, personTotals, leader, streak, HELP_BONUS_POINTS } from "./scoring.js?v=2";
 
 /* =========================================================================
    Dates. Everything is a "YYYY-MM-DD" Monday string; maths happens in UTC
@@ -213,6 +213,10 @@ async function supabaseBackend(onChange) {
       const { error } = await sb.from("tasks").update({ label }).eq("id", id);
       if (error) throw error;
     },
+    async setTaskPoints(id, points) {
+      const { error } = await sb.from("tasks").update({ points }).eq("id", id);
+      if (error) throw error;
+    },
     async deleteTask(id) {
       const { error } = await sb.from("tasks").delete().eq("id", id);
       if (error) throw error;
@@ -278,6 +282,11 @@ function localBackend(onChange) {
       data.tasks = data.tasks.map((t) => (t.id === id ? { ...t, label } : t));
       write(data);
     },
+    async setTaskPoints(id, points) {
+      const data = read();
+      data.tasks = data.tasks.map((t) => (t.id === id ? { ...t, points } : t));
+      write(data);
+    },
     async deleteTask(id) {
       const data = read();
       data.tasks = data.tasks.filter((t) => t.id !== id);
@@ -335,7 +344,7 @@ function helpSummary(roomId, week) {
   if (!names.length) return "";
   const total = Object.values(helpers).reduce((a, b) => a + b, 0);
   const who = names.join(names.length === 2 ? " and " : ", ");
-  return `${who} helped ${assigned === state.me ? "you" : assigned} · ${total} task${total === 1 ? "" : "s"}`;
+  return `${who} helped ${assigned === state.me ? "you" : assigned} · ${total} task${total === 1 ? "" : "s"} · +${HELP_BONUS_POINTS} bonus${names.length > 1 ? " each" : ""}`;
 }
 
 function renderHeader() {
@@ -425,6 +434,11 @@ function renderRooms() {
           <div class="task-edit">
             <input type="text" data-rename="${esc(task.id)}" value="${esc(value)}"
                    aria-label="Task name" enterkeyhint="done">
+            <label class="points-edit">
+              <input type="number" data-points="${esc(task.id)}" value="${pointsOf(task)}"
+                     min="1" max="20" inputmode="numeric" aria-label="Points for ${esc(task.label)}">
+              <span>pts</span>
+            </label>
             <button class="icon-btn danger" type="button" data-delete="${esc(task.id)}"
                     aria-label="Delete ${esc(task.label)}">✕</button>
           </div>`;
@@ -739,10 +753,22 @@ function saveRename(id) {
   const label = state.editTask.value.trim();
   const task = state.tasks.find((t) => t.id === id);
   state.editTask = null;
-  if (!task || !label || label === task.label) { render(); return; }
+  if (!task || !label || label === task.label) return;
   task.label = label;
-  render();
   commit(() => backend.renameTask(id, label));
+}
+
+function saveTaskPoints(id, value) {
+  const task = state.tasks.find((t) => t.id === id);
+  const points = Number(value);
+  if (!task || !Number.isInteger(points) || points < 1 || points > 20) {
+    render();
+    return;
+  }
+  if (points === pointsOf(task)) return;
+  task.points = points;
+  render();
+  commit(() => backend.setTaskPoints(id, points));
 }
 
 function saveNewTask(roomId) {
@@ -872,6 +898,11 @@ function wire() {
     if (rename) { state.editTask = { id: rename.dataset.rename, value: rename.value }; return; }
     const add = e.target.closest("[data-add]");
     if (add) state.adding = { roomId: add.dataset.add, value: add.value };
+  });
+
+  $("#rooms").addEventListener("change", (e) => {
+    const points = e.target.closest("[data-points]");
+    if (points) saveTaskPoints(points.dataset.points, points.value);
   });
 
   $("#rooms").addEventListener("keydown", (e) => {
