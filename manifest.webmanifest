@@ -6,11 +6,10 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f6f5f2",
-  "theme_color": "#f6f5f2",
+  "background_color": "#f8f5f0",
+  "theme_color": "#5a1739",
   "icons": [
-    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "./icon-180.png", "sizes": "180x180", "type": "image/png" },
-    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "./broom-plum-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
+    { "src": "./broom-plum-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }

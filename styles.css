@@ -758,3 +758,50 @@ body::before { display: none; }
   .room-assignment { padding-left: 15px; }
   .hrow-who { gap: 4px; font-size: 11px; }
 }
+
+/* Plum and copper artwork ties the room cards to the app icon. */
+:root {
+  --bg: #f8f5f0;
+  --card-2: #f5eee8;
+  --line: #d9cfc9;
+  --line-2: #eee5df;
+  --ink: #2c2027;
+  --ink-2: #5c4d55;
+  --ink-3: #74666e;
+  --you: #682344;
+  --you-soft: #f5e8ee;
+  --done: #5c6e45;
+  --done-soft: #e8efe2;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c141a;
+    --card: #2b2029;
+    --card-2: #352932;
+    --line: #53414b;
+    --line-2: #42323b;
+    --ink: #fbf4ee;
+    --ink-2: #e4d3db;
+    --ink-3: #c0a9b5;
+    --you: #f0b5cd;
+    --you-soft: #503047;
+    --done: #a9c394;
+    --done-soft: #31402e;
+  }
+}
+.tile {
+  width: 68px; height: 68px;
+  background: #efe1d8;
+  overflow: hidden;
+  border: 1px solid #dfc8bb;
+}
+.tile img { width: 64px; height: 64px; object-fit: contain; display: block; }
+.room-assignment { padding-left: 96px; }
+.hrow-who img { width: 18px; height: 18px; object-fit: contain; }
+.hrow-who .k, .hrow-who .b, .hrow-who .l { color: var(--ink-2); }
+.brand, .eyebrow { color: var(--you); }
+@media (max-width: 400px) {
+  .tile { width: 58px; height: 58px; }
+  .tile img { width: 54px; height: 54px; }
+  .room-assignment { padding-left: 15px; }
+}

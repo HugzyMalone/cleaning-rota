@@ -307,6 +307,11 @@ const RING_C = 2 * Math.PI * RING_R;
 function roomIcon(roomId) {
   return document.getElementById("room-" + roomId) ? "room-" + roomId : "room-living";
 }
+function roomArt(roomId) {
+  return ["kitchen", "bathroom", "living"].includes(roomId)
+    ? `<img src="./room-${roomId}.png" alt="" width="64" height="64">`
+    : `<svg aria-hidden="true"><use href="#${roomIcon(roomId)}"/></svg>`;
+}
 function ringDash(done, total) {
   const frac = total ? done / total : 0;
   return `${(frac * RING_C).toFixed(1)} ${RING_C.toFixed(1)}`;
@@ -445,7 +450,7 @@ function renderRooms() {
       <article class="room ${open ? "open" : ""} ${complete ? "complete" : ""} ${mine ? "mine" : ""}"
                data-room="${esc(room.id)}">
         <button class="room-head" type="button" data-toggle="${esc(room.id)}" aria-expanded="${open}">
-          <span class="tile" aria-hidden="true"><svg><use href="#${roomIcon(room.id)}"/></svg></span>
+          <span class="tile" aria-hidden="true">${roomArt(room.id)}</span>
           <span class="room-meta">
             <span class="room-name">
               ${esc(room.name)}
@@ -524,7 +529,7 @@ function renderHistory() {
     const pct = total ? Math.round((done / total) * 100) : 0;
     const cls = { kitchen: "k", bathroom: "b", living: "l" };
     const summary = state.rooms.map((r) => `
-      <span class="${cls[r.id] || ""}"><svg><use href="#${roomIcon(r.id)}"/></svg>${esc(who[r.id] || "—")}</span>`).join("");
+      <span class="${cls[r.id] || ""}">${roomArt(r.id)}${esc(who[r.id] || "—")}</span>`).join("");
 
     rows.push(`
       <button class="hrow" type="button" data-goto="${week}">
