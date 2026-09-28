@@ -313,11 +313,29 @@ function ring(done, total) {
   return `<span class="room-count"><strong>${done}/${total}</strong><small>tasks</small></span>`;
 }
 
-function tickMeta(tick) {
+function tickMeta(tick, assigned) {
   if (!tick) return "";
-  const who = tick.by_name || "someone";
+  const who = tick.by_name;
   const when = tick.done_at ? fmtDay.format(new Date(tick.done_at)) : "";
-  return esc(who) + (when ? " · " + when : "");
+  const credit = !who || !PEOPLE.includes(who) ? "Done"
+    : assigned && who !== assigned
+      ? `${who} did this for ${assigned === state.me ? "you" : assigned}`
+      : `${who} did this`;
+  return esc(credit) + (when ? " · " + when : "");
+}
+
+function helpSummary(roomId, week) {
+  const assigned = assignmentsFor(week)[roomId];
+  const helpers = {};
+  for (const task of tasksIn(roomId)) {
+    const name = state.ticks[tickKey(week, task.id)]?.by_name;
+    if (name && PEOPLE.includes(name) && name !== assigned) helpers[name] = (helpers[name] || 0) + 1;
+  }
+  const names = Object.keys(helpers);
+  if (!names.length) return "";
+  const total = Object.values(helpers).reduce((a, b) => a + b, 0);
+  const who = names.join(names.length === 2 ? " and " : ", ");
+  return `${who} helped ${assigned === state.me ? "you" : assigned} · ${total} task${total === 1 ? "" : "s"}`;
 }
 
 function renderHeader() {
@@ -395,6 +413,7 @@ function renderRooms() {
     const { done, total } = progress(room.id, state.week);
     const complete = total > 0 && done === total;
     const mine = state.me && who[room.id] === state.me;
+    const helping = helpSummary(room.id, state.week);
     const open = state.open.has(room.id);
     const editing = state.editing === room.id;
 
@@ -416,7 +435,7 @@ function renderRooms() {
           <span class="box" aria-hidden="true"><svg><use href="#tick"/></svg></span>
           <span class="task-text">
             <span class="task-label">${esc(task.label)}</span>
-            <span class="task-meta">${tickMeta(tick)}</span>
+            <span class="task-meta">${tickMeta(tick, who[room.id])}</span>
           </span>
           <span class="task-pts">${pointsOf(task)}</span>
         </button>`;
@@ -456,6 +475,7 @@ function renderRooms() {
             <span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg></span>
           </button>
         </div>
+        <p class="room-help" ${helping ? "" : "hidden"}>${esc(helping)}</p>
         <div class="room-body" ${open ? "" : "inert"}><div><div class="tasks-inner">
           ${rows || '<p class="empty">No tasks yet.</p>'}
           ${addRow}
@@ -556,7 +576,8 @@ function paintTick(taskId, tick, justDone) {
   if (!row) return;
   row.classList.toggle("done", Boolean(tick));
   const meta = row.querySelector(".task-meta");
-  if (meta) meta.textContent = tickMeta(tick);
+  const task = state.tasks.find((t) => t.id === taskId);
+  if (meta) meta.textContent = tickMeta(tick, task && assignmentsFor(state.week)[task.room_id]);
   if (justDone) {
     row.classList.add("just-done");
     setTimeout(() => row.classList.remove("just-done"), 520);
@@ -571,6 +592,10 @@ function paintRoom(roomId) {
   const wasComplete = card.classList.contains("complete");
 
   card.querySelector(".room-count strong").textContent = `${done}/${total}`;
+  const help = helpSummary(roomId, state.week);
+  const helpEl = card.querySelector(".room-help");
+  helpEl.textContent = help;
+  helpEl.hidden = !help;
 
   card.classList.toggle("complete", complete);
   card.querySelector(".badge.done").hidden = !complete;
@@ -663,9 +688,14 @@ async function commit(fn) {
 }
 
 function toggleTask(taskId) {
+  if (!state.me) {
+    $("#identity-hint").hidden = false;
+    $("#people-picker").querySelector("button")?.focus();
+    return;
+  }
   const key = tickKey(state.week, taskId);
   const wasDone = Boolean(state.ticks[key]);
-  const by = state.me || "Someone";
+  const by = state.me;
 
   // Optimistic: the tick lands the instant a thumb hits it.
   if (wasDone) delete state.ticks[key];
@@ -784,10 +814,11 @@ function wire() {
     state.me = state.me === person ? null : person;
     if (state.me) localStorage.setItem("rota.me", state.me);
     else localStorage.removeItem("rota.me");
+    if (state.me) $("#identity-hint").hidden = true;
     for (const el of document.querySelectorAll("[data-person]")) {
       el.setAttribute("aria-pressed", String(el.dataset.person === state.me));
     }
-    paintMine();
+    renderRooms();
     renderStats();
   });
 

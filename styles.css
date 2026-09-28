@@ -876,3 +876,22 @@ details[open] > .section-summary { border-radius: 7px 7px 0 0; }
   .room-name { font-size: 17px; }
   .planner-toolbar { align-items: flex-start; }
 }
+
+.identity-hint {
+  flex-basis: 100%; margin: 2px 0 0;
+  color: var(--you); font-size: 13px; line-height: 1.35;
+}
+.room-help {
+  margin: -2px 13px 11px 83px; padding: 6px 9px;
+  border-radius: 4px; background: var(--you-soft);
+  color: var(--you); font-size: 13px; font-weight: 650;
+}
+.task.done .task-meta { max-height: 42px; font-size: 12px; opacity: 1; }
+.score-help {
+  padding: 0 12px 12px; border: 1px solid var(--line); border-top: 0;
+  background: var(--card); color: var(--ink-2);
+  font-size: 13px; line-height: 1.4;
+}
+@media (max-width: 400px) {
+  .room-help { margin-left: 9px; }
+}

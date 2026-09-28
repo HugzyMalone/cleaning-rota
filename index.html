@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Flat Cleaning Rota</title>
+<title>Rota</title>
 <meta name="description" content="Who's cleaning what this week.">
 <meta name="theme-color" content="#f8f5f0" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1c141a" media="(prefers-color-scheme: dark)">
@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="./styles.css?v=4">
+<link rel="stylesheet" href="./styles.css?v=6">
 </head>
 <body>
 
@@ -52,7 +52,7 @@
 </svg>
 
 <header class="topbar">
-  <div class="masthead"><span class="brand">THE FLAT</span><span class="brand-side">Cleaning rota</span></div>
+  <div class="masthead"><span class="brand">ROTA</span></div>
   <div class="weeknav">
     <button class="stepper" id="prev-week" type="button" aria-label="Previous week">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg>
@@ -72,6 +72,7 @@
   <section class="whoami" aria-label="Choose your name">
     <span class="whoami-label">I'm</span>
     <div class="people" id="people-picker"></div>
+    <p class="identity-hint" id="identity-hint" role="status" hidden>Choose your name before ticking a task so everyone knows who did it.</p>
   </section>
 
   <section id="rooms" class="rooms" aria-label="Rooms this week"></section>
@@ -100,6 +101,7 @@
   <details class="extras">
     <summary class="section-summary">Scores and streaks <span aria-hidden="true">⌄</span></summary>
     <section class="stats" id="stats" aria-label="Your standing"></section>
+    <p class="score-help">The person who does a task gets its points. Helping still counts towards finishing the assigned person's room.</p>
   </details>
 
   <footer class="foot">
@@ -109,6 +111,6 @@
 
 <div id="confetti" class="confetti-layer" aria-hidden="true"></div>
 
-<script type="module" src="./app.js?v=5"></script>
+<script type="module" src="./app.js?v=6"></script>
 </body>
 </html>
