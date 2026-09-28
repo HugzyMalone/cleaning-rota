@@ -17,7 +17,7 @@ Three people, three rooms, so it cycles every three weeks and nobody can end up 
 | Mon 28 Sep | Adam | Harry | Hugo |
 | …and repeat | | | |
 
-It's worked out from the date, not stored anywhere, so it keeps going forever. Tap a name to swap rooms with someone — that applies to **that week only**.
+It's worked out from the date, not stored anywhere, so it keeps going forever. Tap an assigned name to choose from Hugo, Adam and Harry. Selecting someone who already has a room swaps their assignments for **that week only**. The Plan the rota section lets you edit upcoming weeks; its arrows move through more weeks, and Reset restores a week's normal rotation.
 
 ## Setup
 

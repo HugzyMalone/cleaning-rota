@@ -107,6 +107,7 @@ const state = {
   ticks: {},            // "week|taskId" -> { by_name, done_at }
   swaps: {},            // "YYYY-MM-DD" -> { roomId: person }
   week: currentWeek(),
+  planOffset: 0,
   me: localStorage.getItem("rota.me"),
   open: new Set(),      // expanded room ids
   editing: null,        // room id in edit mode
@@ -340,6 +341,30 @@ function renderHeader() {
   $("#prev-week").disabled = weekIndex(state.week) <= 0;
 }
 
+function renderPlanner() {
+  $("#plan-prev").disabled = state.planOffset === 0;
+  $("#plan-weeks").innerHTML = Array.from({ length: 4 }, (_, i) => {
+    const week = addWeeks(currentWeek(), state.planOffset + i);
+    const who = assignmentsFor(week);
+    const adjusted = isSwapped(week);
+    return `<article class="plan-week ${week === currentWeek() ? "plan-current" : ""}">
+      <div class="plan-week-head">
+        <div><span class="plan-week-date">${esc(weekRange(week))}</span>
+        ${week === currentWeek() ? '<span class="plan-now">This week</span>' : ""}</div>
+        ${adjusted ? `<button type="button" class="plan-reset" data-plan-reset="${week}">Reset</button>` : ""}
+      </div>
+      <div class="plan-assignments">${state.rooms.map(room => `
+        <label class="plan-assignment">
+          <span>${esc(room.name)}</span>
+          <select data-assign-room="${esc(room.id)}" data-assign-week="${week}"
+            aria-label="${esc(room.name)} for week of ${esc(week)}">
+            ${PEOPLE.map(person => `<option value="${esc(person)}" ${who[room.id] === person ? "selected" : ""}>${esc(person)}</option>`).join("")}
+          </select>
+        </label>`).join("")}</div>
+    </article>`;
+  }).join("");
+}
+
 function renderPeople() {
   $("#people-picker").innerHTML = PEOPLE.map((p) => `
     <button class="person" type="button" data-person="${esc(p)}"
@@ -426,15 +451,19 @@ function renderRooms() {
               ${esc(room.name)}
               <span class="badge done" ${complete ? "" : "hidden"}>Done</span>
             </span>
-            <span class="room-who">
-              <span class="who-name" data-swap="${esc(room.id)}" role="button" tabindex="0">${esc(who[room.id] || "—")}</span>
-              <span class="badge you" ${mine ? "" : "hidden"}>You</span>
-              <span class="badge swapped" ${swapped ? "" : "hidden"}>Swapped</span>
-            </span>
           </span>
           ${ring(done, total)}
           <span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg></span>
         </button>
+        <label class="room-assignment">
+          <span>Assigned to</span>
+          <select data-assign-room="${esc(room.id)}" data-assign-week="${state.week}"
+            aria-label="Who cleans the ${esc(room.name)} this week">
+            ${PEOPLE.map(person => `<option value="${esc(person)}" ${who[room.id] === person ? "selected" : ""}>${esc(person)}</option>`).join("")}
+          </select>
+          <span class="badge you" ${mine ? "" : "hidden"}>You</span>
+          <span class="badge swapped" ${swapped ? "" : "hidden"}>Changed</span>
+        </label>
         <div class="room-body"><div><div class="tasks-inner">
           ${rows || '<p class="empty">No tasks yet.</p>'}
           ${addRow}
@@ -521,6 +550,7 @@ function render() {
   renderPeople();
   renderStats();
   renderRooms();
+  renderPlanner();
   renderHistory();
   renderStatus();
 }
@@ -665,64 +695,29 @@ function toggleTask(taskId) {
   commit(() => backend.setTick(state.week, taskId, !wasDone, by));
 }
 
-function openSwapSheet(roomId) {
-  const who = assignmentsFor(state.week);
-  const room = state.rooms.find((r) => r.id === roomId);
-  const current = who[roomId];
-  const others = PEOPLE.filter((p) => p !== current);
-
-  $("#sheet-title").textContent = "Who's doing the " + room.name.toLowerCase() + "?";
-  $("#sheet-body").innerHTML =
-    `<p class="sheet-hint">Swaps this week only — the rota carries on as normal afterwards.</p>` +
-    others.map((person) => {
-      const theirRoom = state.rooms.find((r) => who[r.id] === person);
-      const swapBack = theirRoom
-        ? ", " + esc(current === state.me ? "you take" : current + " takes") + " the " + esc(theirRoom.name.toLowerCase())
-        : "";
-      return `
-        <button class="swap-opt" type="button" data-swap-to="${esc(person)}">
-          <strong>${esc(person)}</strong>
-          <span>takes the ${esc(room.name.toLowerCase())}${swapBack}</span>
-        </button>`;
-    }).join("") +
-    (isSwapped(state.week) ? `<button class="swap-opt" type="button" data-swap-reset="1"><strong>Reset this week</strong><span>back to the normal rotation</span></button>` : "");
-
-  $("#sheet").dataset.room = roomId;
-  $("#sheet").hidden = false;
-  $("#sheet-backdrop").hidden = false;
-  document.body.style.overflow = "hidden";
-}
-
-function closeSheet() {
-  $("#sheet").hidden = true;
-  $("#sheet-backdrop").hidden = true;
-  document.body.style.overflow = "";
-}
-
-function applySwap(roomId, person) {
-  const who = assignmentsFor(state.week);
+function applySwap(roomId, person, week = state.week) {
+  const who = assignmentsFor(week);
+  if (who[roomId] === person) return;
   const displaced = who[roomId];
   const theirRoom = state.rooms.find((r) => who[r.id] === person);
 
   const next = { ...who, [roomId]: person };
   if (theirRoom) next[theirRoom.id] = displaced;
 
-  const base = defaultAssignments(state.week, state.rooms);
+  const base = defaultAssignments(week, state.rooms);
   const changed = state.rooms.some((r) => next[r.id] !== base[r.id]);
 
-  state.swaps[state.week] = next;
-  if (!changed) delete state.swaps[state.week];
-  closeSheet();
+  state.swaps[week] = next;
+  if (!changed) delete state.swaps[week];
   render();
 
-  commit(() => backend.setSwaps(state.week, changed ? next : null));
+  commit(() => backend.setSwaps(week, changed ? next : null));
 }
 
-function resetSwap() {
-  delete state.swaps[state.week];
-  closeSheet();
+function resetSwap(week = state.week) {
+  delete state.swaps[week];
   render();
-  commit(() => backend.setSwaps(state.week, null));
+  commit(() => backend.setSwaps(week, null));
 }
 
 function saveRename(id) {
@@ -787,8 +782,16 @@ function wire() {
   });
   $("#next-week").addEventListener("click", () => goToWeek(addWeeks(state.week, 1)));
   $("#today-btn").addEventListener("click", () => goToWeek(currentWeek()));
-  $("#sheet-close").addEventListener("click", closeSheet);
-  $("#sheet-backdrop").addEventListener("click", closeSheet);
+  $("#plan-prev").addEventListener("click", () => { state.planOffset = Math.max(0, state.planOffset - 4); renderPlanner(); });
+  $("#plan-next").addEventListener("click", () => { state.planOffset += 4; renderPlanner(); });
+  $("#plan-weeks").addEventListener("click", (e) => {
+    const reset = e.target.closest("[data-plan-reset]");
+    if (reset) { resetSwap(reset.dataset.planReset); return; }
+  });
+  document.addEventListener("change", (e) => {
+    const picker = e.target.closest("[data-assign-room]");
+    if (picker) applySwap(picker.dataset.assignRoom, picker.value, picker.dataset.assignWeek);
+  });
 
   $("#people-picker").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-person]");
@@ -805,9 +808,6 @@ function wire() {
   });
 
   $("#rooms").addEventListener("click", (e) => {
-    const swap = e.target.closest("[data-swap]");
-    if (swap) { e.stopPropagation(); openSwapSheet(swap.dataset.swap); return; }
-
     const toggle = e.target.closest("[data-toggle]");
     if (toggle) {
       const id = toggle.dataset.toggle;
@@ -870,19 +870,9 @@ function wire() {
     if (rename) setTimeout(() => saveRename(rename.dataset.rename), 60);
   }, true);
 
-  $("#sheet").addEventListener("click", (e) => {
-    const to = e.target.closest("[data-swap-to]");
-    if (to) { applySwap($("#sheet").dataset.room, to.dataset.swapTo); return; }
-    if (e.target.closest("[data-swap-reset]")) resetSwap();
-  });
-
   $("#history").addEventListener("click", (e) => {
     const row = e.target.closest("[data-goto]");
     if (row) goToWeek(row.dataset.goto);
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeSheet();
   });
 
   const topbar = document.querySelector(".topbar");

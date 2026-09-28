@@ -52,6 +52,7 @@
 </svg>
 
 <header class="topbar">
+  <div class="masthead"><span class="brand">THE FLAT</span><span class="brand-side">Cleaning rota</span></div>
   <div class="weeknav">
     <button class="stepper" id="prev-week" type="button" aria-label="Previous week">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg>
@@ -77,6 +78,18 @@
 
   <section id="rooms" class="rooms" aria-label="Rooms this week"></section>
 
+  <section class="planner" aria-labelledby="planner-title">
+    <div class="section-heading">
+      <div><span class="eyebrow">COMING UP</span><h2 id="planner-title">Plan the rota</h2></div>
+      <div class="planner-nav">
+        <button type="button" id="plan-prev" aria-label="Earlier weeks">‹</button>
+        <button type="button" id="plan-next" aria-label="Later weeks">›</button>
+      </div>
+    </div>
+    <p class="planner-help">Tap a name to choose someone. If they're already assigned, the two people swap rooms for that week.</p>
+    <div id="plan-weeks" class="plan-weeks"></div>
+  </section>
+
   <div class="all-done" id="all-done" hidden>
     <span class="all-done-mark">✦</span>
     <strong>The whole flat is spotless.</strong>
@@ -94,14 +107,6 @@
     <span>Rota started Mon 14 Sep 2026</span>
   </footer>
 </main>
-
-<div id="sheet-backdrop" class="backdrop" hidden></div>
-<div id="sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
-  <div class="sheet-grip"></div>
-  <h2 id="sheet-title">Swap</h2>
-  <div id="sheet-body"></div>
-  <button class="sheet-close" id="sheet-close" type="button">Cancel</button>
-</div>
 
 <div id="confetti" class="confetti-layer" aria-hidden="true"></div>
 

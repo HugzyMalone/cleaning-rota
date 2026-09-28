@@ -644,3 +644,117 @@ button { font: inherit; color: inherit; cursor: pointer; }
   }
   .confetti-layer { display: none; }
 }
+
+/* A clear household noticeboard: simple type, flat surfaces and direct controls. */
+:root {
+  color-scheme: light;
+  --bg: #f6f6f2;
+  --card: #fff;
+  --card-2: #f5f6f3;
+  --line: #d5dbd6;
+  --line-2: #e8ece8;
+  --ink: #172622;
+  --ink-2: #40534c;
+  --ink-3: #61716a;
+  --you: #176d56;
+  --you-soft: #e6f3ec;
+  --done: #176d56;
+  --done-soft: #e6f3ec;
+  --r-card: 8px;
+  --r-md: 7px;
+  --r-sm: 5px;
+  --shadow: none;
+  --shadow-sm: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #151d1a;
+    --card: #1d2924;
+    --card-2: #22302a;
+    --line: #405149;
+    --line-2: #304039;
+    --ink: #f3f8f3;
+    --ink-2: #c3d2c9;
+    --ink-3: #9db1a4;
+    --you: #a2d7b5;
+    --you-soft: #254534;
+    --done: #a2d7b5;
+    --done-soft: #254534;
+  }
+}
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 16px; max-width: 760px; }
+body::before { display: none; }
+.topbar {
+  background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none;
+  padding: 13px 16px 15px; border-bottom: 1px solid var(--line);
+}
+.masthead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 13px; }
+.brand { font-size: 12px; font-weight: 900; letter-spacing: .16em; color: var(--you); }
+.brand-side { color: var(--ink-3); font-size: 14px; }
+.weeknav { gap: 12px; }
+.weeklabel { text-align: left; }
+.weeklabel h1 { font-family: Georgia, serif; font-size: clamp(20px, 5vw, 27px); font-weight: 700; }
+.weeklabel p { font-size: 13px; color: var(--ink-2); }
+.stepper { border-radius: 6px; width: 38px; height: 42px; box-shadow: none; }
+.stepper:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--you); outline-offset: 2px; }
+.today-btn { margin: 10px 0 0; border-radius: 5px; }
+.whoami { padding: 17px 0 3px; }
+.whoami-label { font-size: 14px; color: var(--ink-2); }
+.person { border-radius: 5px; box-shadow: none; padding: 7px 12px; }
+.person[aria-pressed="true"] { box-shadow: none; }
+.stats { padding: 9px 0 3px; }
+.chip { border-radius: 4px; box-shadow: none; animation: none; }
+.rooms { margin-top: 18px; gap: 10px; }
+.room { border-radius: 8px; box-shadow: none; animation: none; }
+.room.mine { box-shadow: none; border-color: var(--you); border-width: 2px; }
+.room-head { padding: 15px; }
+.tile { border-radius: 5px; width: 42px; height: 42px; }
+.room-name { font-family: Georgia, serif; font-size: 19px; }
+.room-assignment {
+  display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  padding: 0 15px 13px 70px; font-size: 14px; color: var(--ink-2);
+}
+.room-assignment select, .plan-assignment select {
+  appearance: auto; -webkit-appearance: menulist;
+  font: inherit; font-size: 16px; font-weight: 700;
+  color: var(--ink); background: var(--card);
+  border: 1px solid var(--line); border-radius: 5px;
+  min-height: 40px; padding: 6px 9px; cursor: pointer;
+}
+.room-assignment select { color: var(--you); }
+.badge { font-size: 12px; letter-spacing: 0; text-transform: none; border-radius: 4px; }
+.ring-text { font-size: 12px; }
+.task { min-height: 49px; }
+.task-label { font-size: 15px; }
+.task-pts { border-radius: 4px; }
+.planner { margin-top: 32px; }
+.section-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+.eyebrow { font-size: 12px; letter-spacing: .13em; font-weight: 800; color: var(--you); }
+.section-heading h2 { font: 700 24px/1.2 Georgia, serif; margin-top: 2px; }
+.planner-help { color: var(--ink-2); font-size: 14px; margin: 9px 0 15px; line-height: 1.45; }
+.planner-nav { display: flex; gap: 6px; }
+.planner-nav button { background: var(--card); border: 1px solid var(--line); border-radius: 5px; width: 40px; height: 40px; font-size: 27px; line-height: 1; }
+.planner-nav button:disabled { opacity: .3; }
+.plan-weeks { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); }
+.plan-week { padding: 15px; border-top: 1px solid var(--line); }
+.plan-week:first-child { border-top: 0; }
+.plan-current { border-left: 3px solid var(--you); padding-left: 12px; }
+.plan-week-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
+.plan-week-date { font-weight: 750; font-size: 16px; }
+.plan-now { margin-left: 7px; font-size: 12px; color: var(--you); font-weight: 700; }
+.plan-reset { border: 0; background: transparent; color: var(--you); font-size: 14px; font-weight: 700; padding: 7px; }
+.plan-assignments { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.plan-assignment { display: flex; flex-direction: column; gap: 5px; min-width: 0; font-size: 13px; color: var(--ink-2); }
+.plan-assignment select { width: 100%; min-width: 0; font-size: 15px; background: var(--card-2); }
+.history { margin-top: 32px; }
+.history h2 { font: 700 21px/1.2 Georgia, serif; letter-spacing: 0; text-transform: none; color: var(--ink); }
+.history-rows { box-shadow: none; border-radius: 8px; }
+.foot { font-size: 12px; }
+@media (max-width: 400px) {
+  .plan-assignments { gap: 5px; }
+  .plan-week { padding-right: 10px; }
+  .plan-assignment select { font-size: 14px; padding: 6px 2px; }
+  .room-assignment { padding-left: 15px; }
+  .hrow-who { gap: 4px; font-size: 11px; }
+}
