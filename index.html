@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="./styles.css?v=3">
+<link rel="stylesheet" href="./styles.css?v=4">
 </head>
 <body>
 
@@ -69,47 +69,46 @@
 </header>
 
 <main>
-  <section class="whoami" aria-label="Who are you?">
-    <span class="whoami-label">You are</span>
+  <section class="whoami" aria-label="Choose your name">
+    <span class="whoami-label">I'm</span>
     <div class="people" id="people-picker"></div>
   </section>
 
-  <section class="stats" id="stats" aria-label="Your standing"></section>
-
   <section id="rooms" class="rooms" aria-label="Rooms this week"></section>
 
-  <section class="planner" aria-labelledby="planner-title">
-    <div class="section-heading">
-      <div><span class="eyebrow">COMING UP</span><h2 id="planner-title">Plan the rota</h2></div>
+  <div class="all-done" id="all-done" hidden>
+    <strong>All done this week.</strong>
+  </div>
+
+  <details class="planner">
+    <summary class="section-summary">Change upcoming weeks <span aria-hidden="true">⌄</span></summary>
+    <div class="planner-toolbar">
+      <p class="planner-help">Choose a name for each room. People swap rooms for that week only.</p>
       <div class="planner-nav">
         <button type="button" id="plan-prev" aria-label="Earlier weeks">‹</button>
         <button type="button" id="plan-next" aria-label="Later weeks">›</button>
       </div>
     </div>
-    <p class="planner-help">Tap a name to choose someone. If they're already assigned, the two people swap rooms for that week.</p>
     <div id="plan-weeks" class="plan-weeks"></div>
-  </section>
+  </details>
 
-  <div class="all-done" id="all-done" hidden>
-    <span class="all-done-mark">✦</span>
-    <strong>The whole flat is spotless.</strong>
-    <span>Every room, every task. Nice one.</span>
-  </div>
-
-  <section class="history" aria-labelledby="history-title">
-    <h2 id="history-title">Recent weeks</h2>
+  <details class="history">
+    <summary class="section-summary">Past weeks <span aria-hidden="true">⌄</span></summary>
     <div id="history" class="history-rows"></div>
-  </section>
+  </details>
+
+  <details class="extras">
+    <summary class="section-summary">Scores and streaks <span aria-hidden="true">⌄</span></summary>
+    <section class="stats" id="stats" aria-label="Your standing"></section>
+  </details>
 
   <footer class="foot">
     <span id="sync-status" class="sync">Connecting…</span>
-    <span class="dot">·</span>
-    <span>Rota started Mon 14 Sep 2026</span>
   </footer>
 </main>
 
 <div id="confetti" class="confetti-layer" aria-hidden="true"></div>
 
-<script type="module" src="./app.js?v=3"></script>
+<script type="module" src="./app.js?v=4"></script>
 </body>
 </html>

@@ -301,9 +301,6 @@ const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-const RING_R = 18;
-const RING_C = 2 * Math.PI * RING_R;
-
 function roomIcon(roomId) {
   return document.getElementById("room-" + roomId) ? "room-" + roomId : "room-living";
 }
@@ -312,21 +309,8 @@ function roomArt(roomId) {
     ? `<img src="./room-${roomId}.png" alt="" width="64" height="64">`
     : `<svg aria-hidden="true"><use href="#${roomIcon(roomId)}"/></svg>`;
 }
-function ringDash(done, total) {
-  const frac = total ? done / total : 0;
-  return `${(frac * RING_C).toFixed(1)} ${RING_C.toFixed(1)}`;
-}
 function ring(done, total) {
-  const frac = total ? done / total : 0;
-  return `
-    <div class="ring">
-      <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
-        <circle class="ring-track" cx="22" cy="22" r="${RING_R}" fill="none" stroke-width="3.5"/>
-        <circle class="ring-fill" cx="22" cy="22" r="${RING_R}" fill="none" stroke-width="3.5"
-                stroke-linecap="${frac ? "round" : "butt"}" stroke-dasharray="${ringDash(done, total)}"/>
-      </svg>
-      <span class="ring-text">${done}/${total}</span>
-    </div>`;
+  return `<span class="room-count">${done}/${total}</span>`;
 }
 
 function tickMeta(tick) {
@@ -449,27 +433,30 @@ function renderRooms() {
     return `
       <article class="room ${open ? "open" : ""} ${complete ? "complete" : ""} ${mine ? "mine" : ""}"
                data-room="${esc(room.id)}">
-        <button class="room-head" type="button" data-toggle="${esc(room.id)}" aria-expanded="${open}">
+        <div class="room-head">
           <span class="tile" aria-hidden="true">${roomArt(room.id)}</span>
           <span class="room-meta">
             <span class="room-name">
               ${esc(room.name)}
               <span class="badge done" ${complete ? "" : "hidden"}>Done</span>
             </span>
+            <label class="room-assignment">
+              <span>Assigned to</span>
+              <select data-assign-room="${esc(room.id)}" data-assign-week="${state.week}"
+                aria-label="Who cleans the ${esc(room.name)} this week">
+                ${PEOPLE.map(person => `<option value="${esc(person)}" ${who[room.id] === person ? "selected" : ""}>${esc(person)}</option>`).join("")}
+              </select>
+              <span class="badge you" ${mine ? "" : "hidden"}>You</span>
+              <span class="badge swapped" ${swapped ? "" : "hidden"}>Changed</span>
+            </label>
           </span>
-          ${ring(done, total)}
-          <span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg></span>
-        </button>
-        <label class="room-assignment">
-          <span>Assigned to</span>
-          <select data-assign-room="${esc(room.id)}" data-assign-week="${state.week}"
-            aria-label="Who cleans the ${esc(room.name)} this week">
-            ${PEOPLE.map(person => `<option value="${esc(person)}" ${who[room.id] === person ? "selected" : ""}>${esc(person)}</option>`).join("")}
-          </select>
-          <span class="badge you" ${mine ? "" : "hidden"}>You</span>
-          <span class="badge swapped" ${swapped ? "" : "hidden"}>Changed</span>
-        </label>
-        <div class="room-body"><div><div class="tasks-inner">
+          <button class="room-expand" type="button" data-toggle="${esc(room.id)}"
+            aria-expanded="${open}" aria-label="${open ? "Hide" : "Show"} tasks for ${esc(room.name)}">
+            ${ring(done, total)}
+            <span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg></span>
+          </button>
+        </div>
+        <div class="room-body" ${open ? "" : "inert"}><div><div class="tasks-inner">
           ${rows || '<p class="empty">No tasks yet.</p>'}
           ${addRow}
           <div class="room-actions">
@@ -547,7 +534,7 @@ function renderStatus() {
   el.className = "sync " + state.mode;
   el.textContent = state.mode === "live"
     ? "Synced with the flat"
-    : "This device only — see README to turn on syncing";
+    : "Saved on this device";
 }
 
 function render() {
@@ -583,20 +570,12 @@ function paintRoom(roomId) {
   const complete = total > 0 && done === total;
   const wasComplete = card.classList.contains("complete");
 
-  const fill = card.querySelector(".ring-fill");
-  fill.setAttribute("stroke-dasharray", ringDash(done, total));
-  fill.setAttribute("stroke-linecap", done ? "round" : "butt");
-
-  const text = card.querySelector(".ring-text");
-  text.textContent = `${done}/${total}`;
-  text.classList.remove("bump");
-  void text.offsetWidth;          // restart the animation
-  text.classList.add("bump");
+  card.querySelector(".room-count").textContent = `${done}/${total}`;
 
   card.classList.toggle("complete", complete);
   card.querySelector(".badge.done").hidden = !complete;
 
-  if (complete && !wasComplete) celebrate(card);
+  if (complete && !wasComplete) buzz(14);
   paintAllDone();
   renderStats();
 }
@@ -824,7 +803,9 @@ function wire() {
         state.open.add(id);
       }
       card.classList.toggle("open", state.open.has(id));
+      card.querySelector(".room-body").inert = !state.open.has(id);
       toggle.setAttribute("aria-expanded", String(state.open.has(id)));
+      toggle.setAttribute("aria-label", `${state.open.has(id) ? "Hide" : "Show"} tasks for ${card.querySelector(".room-name").firstChild.textContent.trim()}`);
       return;
     }
 
