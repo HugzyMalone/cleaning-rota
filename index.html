@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="./styles.css?v=7">
+<link rel="stylesheet" href="./styles.css?v=8">
 </head>
 <body>
 
@@ -77,6 +77,11 @@
 
   <section id="rooms" class="rooms" aria-label="Rooms this week"></section>
 
+  <section class="activity-section" aria-label="Activity this week">
+    <div class="activity-heading"><h2>Activity this week</h2><span>Every clean counts</span></div>
+    <ol id="activity" class="activity-list"></ol>
+  </section>
+
   <div class="all-done" id="all-done" hidden>
     <strong>All done this week.</strong>
   </div>
@@ -101,7 +106,7 @@
   <details class="extras">
     <summary class="section-summary">Scores and streaks <span aria-hidden="true">⌄</span></summary>
     <section class="stats" id="stats" aria-label="Your standing"></section>
-    <p class="score-help">The person who does a task gets its points, plus 3 bonus points for helping in each other person's room that week. Helping also finishes the assigned person's room.</p>
+    <p class="score-help">Every time you tap a task, you earn its points. Helping in another person's room earns 10 bonus points once per room each week. Each task only needs doing once to finish the room.</p>
   </details>
 
   <footer class="foot">
@@ -111,6 +116,6 @@
 
 <div id="confetti" class="confetti-layer" aria-hidden="true"></div>
 
-<script type="module" src="./app.js?v=9"></script>
+<script type="module" src="./app.js?v=10"></script>
 </body>
 </html>
