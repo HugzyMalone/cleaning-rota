@@ -567,7 +567,7 @@ function renderStatus() {
   const el = $("#sync-status");
   el.className = "sync " + state.mode;
   el.textContent = state.mode === "live"
-    ? "Synced with the flat"
+    ? "Synced with the house"
     : "Saved on this device";
 }
 
