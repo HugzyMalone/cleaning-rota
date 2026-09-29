@@ -1,5 +1,5 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY, PEOPLE, START_MONDAY } from "./config.js";
-import { pointsOf, personTotals, leader, streak, HELP_BONUS_POINTS } from "./scoring.js?v=2";
+import { pointsOf, pointsFor, personTotals, leader, streak, HELP_BONUS_POINTS } from "./scoring.js?v=3";
 
 /* =========================================================================
    Dates. Everything is a "YYYY-MM-DD" Monday string; maths happens in UTC
@@ -85,13 +85,13 @@ const DEFAULT_ROOMS = [
 
 // Points are weighted by effort, so a light room can't out-earn a heavy one.
 const DEFAULT_TASKS = [
-  ["kitchen", "Wipe countertops", 2], ["kitchen", "Clean the hob", 3],
-  ["kitchen", "Clean the sink", 2], ["kitchen", "Hoover the floor", 3],
-  ["kitchen", "Mop the floor", 4],
-  ["bathroom", "Clean the toilet", 3], ["bathroom", "Clean the sink", 2],
-  ["bathroom", "Clean the bath", 4], ["bathroom", "Hoover the floor", 2],
-  ["bathroom", "Mop the floor", 3],
-  ["living", "Hoover the floor", 3], ["living", "Clean the coffee table", 2],
+  ["kitchen", "Wipe countertops", 10], ["kitchen", "Clean the hob", 15],
+  ["kitchen", "Clean the sink", 10], ["kitchen", "Hoover the floor", 15],
+  ["kitchen", "Mop the floor", 20],
+  ["bathroom", "Clean the toilet", 15], ["bathroom", "Clean the sink", 10],
+  ["bathroom", "Clean the bath", 20], ["bathroom", "Hoover the floor", 10],
+  ["bathroom", "Mop the floor", 15],
+  ["living", "Hoover the floor", 15], ["living", "Clean the coffee table", 10],
 ];
 
 const TINTS = {
@@ -104,7 +104,7 @@ const NEUTRAL_TINT = "106, 86, 208";
 const state = {
   rooms: [],
   tasks: [],
-  ticks: {},            // "week|taskId" -> { by_name, done_at }
+  completions: [],      // one record per time a person finished a task
   swaps: {},            // "YYYY-MM-DD" -> { roomId: person }
   week: currentWeek(),
   planOffset: 0,
@@ -116,12 +116,13 @@ const state = {
   mode: "…",            // "live" | "solo"
 };
 
-const tickKey = (week, taskId) => week + "|" + taskId;
 const tasksIn = (roomId) => state.tasks.filter((t) => t.room_id === roomId && !t.archived);
+const eventsForTask = (week, taskId) => state.completions.filter((e) => e.week_start === week && e.task_id === taskId);
+const latestCompletion = (week, taskId) => eventsForTask(week, taskId).sort((a, b) => b.done_at.localeCompare(a.done_at))[0];
 
 function progress(roomId, week) {
   const list = tasksIn(roomId);
-  const done = list.filter((t) => state.ticks[tickKey(week, t.id)]).length;
+  const done = list.filter((t) => eventsForTask(week, t.id).length).length;
   return { done, total: list.length };
 }
 
@@ -129,9 +130,9 @@ function progress(roomId, week) {
 const ctx = {
   get rooms() { return state.rooms; },
   get tasks() { return state.tasks; },
-  get ticks() { return state.ticks; },
+  get completions() { return state.completions; },
   people: PEOPLE,
-  tasksIn, tickKey, assignmentsFor, addWeeks, weekIndex,
+  tasksIn, assignmentsFor, addWeeks, weekIndex,
 };
 
 /* =========================================================================
@@ -139,11 +140,10 @@ const ctx = {
    page is never broken, just quieter.
    ========================================================================= */
 
-function applyRows({ rooms, tasks, ticks, swaps }) {
+function applyRows({ rooms, tasks, completions, swaps }) {
   state.rooms = rooms.slice().sort((a, b) => a.sort_order - b.sort_order);
   state.tasks = tasks.slice().sort((a, b) => a.sort_order - b.sort_order);
-  state.ticks = {};
-  for (const t of ticks) state.ticks[tickKey(t.week_start, t.task_id)] = t;
+  state.completions = completions;
   state.swaps = {};
   for (const s of swaps) state.swaps[s.week_start] = s.assignments;
 }
@@ -154,16 +154,28 @@ async function supabaseBackend(onChange) {
   );
   const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  async function fetchCompletions() {
+    const all = [];
+    for (let start = 0; ; start += 1000) {
+      const { data, error } = await sb.from("completions").select("*")
+        .order("done_at", { ascending: false }).order("id", { ascending: false })
+        .range(start, start + 999);
+      if (error) throw error;
+      all.push(...data);
+      if (data.length < 1000) return all;
+    }
+  }
+
   async function fetchAll() {
-    const [rooms, tasks, ticks, swaps] = await Promise.all([
+    const [rooms, tasks, completions, swaps] = await Promise.all([
       sb.from("rooms").select("*"),
       sb.from("tasks").select("*"),
-      sb.from("ticks").select("*"),
+      fetchCompletions(),
       sb.from("swaps").select("*"),
     ]);
-    for (const r of [rooms, tasks, ticks, swaps]) if (r.error) throw r.error;
+    for (const r of [rooms, tasks, swaps]) if (r.error) throw r.error;
     applyRows({
-      rooms: rooms.data, tasks: tasks.data, ticks: ticks.data, swaps: swaps.data,
+      rooms: rooms.data, tasks: tasks.data, completions, swaps: swaps.data,
     });
   }
 
@@ -176,7 +188,7 @@ async function supabaseBackend(onChange) {
   };
 
   const channel = sb.channel("rota");
-  for (const table of ["rooms", "tasks", "ticks", "swaps"]) {
+  for (const table of ["rooms", "tasks", "completions", "swaps"]) {
     channel.on("postgres_changes", { event: "*", schema: "public", table }, refresh);
   }
   channel.subscribe();
@@ -189,18 +201,13 @@ async function supabaseBackend(onChange) {
   return {
     mode: "live",
     refresh: fetchAll,
-    async setTick(week, taskId, done, by) {
-      if (done) {
-        const { error } = await sb.from("ticks").upsert(
-          { week_start: week, task_id: taskId, done: true, by_name: by, done_at: new Date().toISOString() },
-          { onConflict: "week_start,task_id" },
-        );
-        if (error) throw error;
-      } else {
-        const { error } = await sb.from("ticks").delete()
-          .eq("week_start", week).eq("task_id", taskId);
-        if (error) throw error;
-      }
+    async addCompletion(event) {
+      const { error } = await sb.from("completions").insert(event);
+      if (error) throw error;
+    },
+    async removeCompletion(id) {
+      const { error } = await sb.from("completions").delete().eq("id", id);
+      if (error) throw error;
     },
     async addTask(roomId, label, sortOrder) {
       const { data, error } = await sb.from("tasks")
@@ -240,14 +247,26 @@ function localBackend(onChange) {
   function read() {
     try {
       const raw = JSON.parse(localStorage.getItem(KEY));
-      if (raw && raw.rooms) return raw;
+      if (raw && raw.rooms) {
+        if (!raw.completions) {
+          raw.tasks = raw.tasks.map((task) => ({ ...task, points: Math.max(10, Number(task.points || 2) * 5) }));
+          raw.completions = (raw.ticks || []).map((tick) => ({
+            id: crypto.randomUUID(), week_start: tick.week_start, task_id: tick.task_id,
+            by_name: tick.by_name, done_at: tick.done_at,
+            points_awarded: raw.tasks.find((task) => task.id === tick.task_id)?.points || 10,
+          }));
+          delete raw.ticks;
+          localStorage.setItem(KEY, JSON.stringify(raw));
+        }
+        return raw;
+      }
     } catch { /* fall through to a fresh seed */ }
     return {
       rooms: DEFAULT_ROOMS,
       tasks: DEFAULT_TASKS.map(([room_id, label, points], i) => ({
         id: "seed-" + i, room_id, label, points, sort_order: i, archived: false,
       })),
-      ticks: [], swaps: [],
+      completions: [], swaps: [],
     };
   }
   function write(data) {
@@ -264,14 +283,18 @@ function localBackend(onChange) {
   return {
     mode: "solo",
     async refresh() { applyRows(read()); },
-    async setTick(week, taskId, done, by) {
-      const data = read();   // the saved file is the truth; optimistic edits live only in state
-      data.ticks = data.ticks.filter((t) => !(t.week_start === week && t.task_id === taskId));
-      if (done) data.ticks.push({ week_start: week, task_id: taskId, done: true, by_name: by, done_at: new Date().toISOString() });
+    async addCompletion(event) {
+      const data = read();
+      data.completions = [...(data.completions || []), event];
+      write(data);
+    },
+    async removeCompletion(id) {
+      const data = read();
+      data.completions = (data.completions || []).filter((event) => event.id !== id);
       write(data);
     },
     async addTask(roomId, label, sortOrder) {
-      const row = { id: crypto.randomUUID(), room_id: roomId, label, points: 2, sort_order: sortOrder, archived: false };
+      const row = { id: crypto.randomUUID(), room_id: roomId, label, points: 10, sort_order: sortOrder, archived: false };
       const data = read();
       data.tasks = data.tasks.concat(row);
       write(data);
@@ -290,7 +313,7 @@ function localBackend(onChange) {
     async deleteTask(id) {
       const data = read();
       data.tasks = data.tasks.filter((t) => t.id !== id);
-      data.ticks = data.ticks.filter((t) => t.task_id !== id);
+      data.completions = (data.completions || []).filter((event) => event.task_id !== id);
       write(data);
     },
     async setSwaps(week, map) {
@@ -330,15 +353,17 @@ function tickMeta(tick, assigned) {
     : assigned && who !== assigned
       ? `${who} did this for ${assigned === state.me ? "you" : assigned}`
       : `${who} did this`;
-  return esc(credit) + (when ? " · " + when : "");
+  return credit + (when ? " · " + when : "");
 }
 
 function helpSummary(roomId, week) {
   const assigned = assignmentsFor(week)[roomId];
   const helpers = {};
   for (const task of tasksIn(roomId)) {
-    const name = state.ticks[tickKey(week, task.id)]?.by_name;
-    if (name && PEOPLE.includes(name) && name !== assigned) helpers[name] = (helpers[name] || 0) + 1;
+    for (const event of eventsForTask(week, task.id)) {
+      const name = event.by_name;
+      if (name && PEOPLE.includes(name) && name !== assigned) helpers[name] = (helpers[name] || 0) + 1;
+    }
   }
   const names = Object.keys(helpers);
   if (!names.length) return "";
@@ -436,22 +461,24 @@ function renderRooms() {
                    aria-label="Task name" enterkeyhint="done">
             <label class="points-edit">
               <input type="number" data-points="${esc(task.id)}" value="${pointsOf(task)}"
-                     min="1" max="20" inputmode="numeric" aria-label="Points for ${esc(task.label)}">
+                     min="10" max="100" inputmode="numeric" aria-label="Points for ${esc(task.label)}">
               <span>pts</span>
             </label>
             <button class="icon-btn danger" type="button" data-delete="${esc(task.id)}"
                     aria-label="Delete ${esc(task.label)}">✕</button>
           </div>`;
       }
-      const tick = state.ticks[tickKey(state.week, task.id)];
+      const count = eventsForTask(state.week, task.id).length;
+      const tick = latestCompletion(state.week, task.id);
       return `
-        <button class="task ${tick ? "done" : ""}" type="button" data-task="${esc(task.id)}">
+        <button class="task ${tick ? "done" : ""}" type="button" data-task="${esc(task.id)}"
+          aria-label="${esc(task.label)}. ${count} time${count === 1 ? "" : "s"} this week. Tap to log another. ${pointsOf(task)} points">
           <span class="box" aria-hidden="true"><svg><use href="#tick"/></svg></span>
           <span class="task-text">
             <span class="task-label">${esc(task.label)}</span>
-            <span class="task-meta">${tickMeta(tick, who[room.id])}</span>
+            <span class="task-meta">${esc(tickMeta(tick, who[room.id]))}${count > 1 ? ` · ${count} times` : ""}</span>
           </span>
-          <span class="task-pts">${pointsOf(task)}</span>
+          <span class="task-pts">+${pointsOf(task)}</span>
         </button>`;
     }).join("");
 
@@ -571,62 +598,45 @@ function renderStatus() {
     : "Saved on this device";
 }
 
+const fmtActivity = new Intl.DateTimeFormat("en-GB", {
+  weekday: "short", hour: "numeric", minute: "2-digit", timeZone: "Europe/London",
+});
+function activityPhrase(label) {
+  if (!label) return "completed a task";
+  return label.replace(/^(Wipe|Clean|Hoover|Mop)\b/, (verb) =>
+    ({ Wipe: "wiped", Clean: "cleaned", Hoover: "hoovered", Mop: "mopped" })[verb])
+    .replace(/^./, (first) => first.toLowerCase());
+}
+
+function renderActivity() {
+  const tasks = new Map(state.tasks.map((task) => [task.id, task]));
+  const rooms = new Map(state.rooms.map((room) => [room.id, room]));
+  const events = state.completions.filter((event) => event.week_start === state.week)
+    .sort((a, b) => b.done_at.localeCompare(a.done_at));
+  $("#activity").innerHTML = events.length ? events.map((event) => {
+    const task = tasks.get(event.task_id);
+    const room = rooms.get(task?.room_id);
+    const name = PEOPLE.includes(event.by_name) ? event.by_name : "Someone";
+    const points = pointsFor(event, task);
+    const time = event.done_at ? fmtActivity.format(new Date(event.done_at)) : "";
+    return `<li class="activity-row">
+      <div class="activity-copy"><strong>${esc(name)}</strong> ${esc(activityPhrase(task?.label))}
+        <span class="activity-detail">${esc(room?.name || "Room")} · ${esc(time)}</span></div>
+      <b class="activity-points">+${points} pts</b>
+      <button type="button" class="activity-undo" data-undo="${esc(event.id)}" aria-label="Undo ${esc(name)} doing ${esc(task?.label || "a task")}">Undo</button>
+    </li>`;
+  }).join("") : '<li class="activity-empty">No tasks logged this week yet.</li>';
+}
+
 function render() {
   renderHeader();
   renderPeople();
   renderStats();
   renderRooms();
+  renderActivity();
   renderPlanner();
   renderHistory();
   renderStatus();
-}
-
-/* =========================================================================
-   Targeted repaints — ticking should animate, not rebuild the page
-   ========================================================================= */
-
-function paintTick(taskId, tick, justDone) {
-  const row = document.querySelector(`[data-task="${CSS.escape(taskId)}"]`);
-  if (!row) return;
-  row.classList.toggle("done", Boolean(tick));
-  const meta = row.querySelector(".task-meta");
-  const task = state.tasks.find((t) => t.id === taskId);
-  if (meta) meta.textContent = tickMeta(tick, task && assignmentsFor(state.week)[task.room_id]);
-  if (justDone) {
-    row.classList.add("just-done");
-    setTimeout(() => row.classList.remove("just-done"), 520);
-  }
-}
-
-function paintRoom(roomId) {
-  const card = document.querySelector(`.room[data-room="${CSS.escape(roomId)}"]`);
-  if (!card) return;
-  const { done, total } = progress(roomId, state.week);
-  const complete = total > 0 && done === total;
-  const wasComplete = card.classList.contains("complete");
-
-  card.querySelector(".room-count strong").textContent = `${done}/${total}`;
-  const help = helpSummary(roomId, state.week);
-  const helpEl = card.querySelector(".room-help");
-  helpEl.textContent = help;
-  helpEl.hidden = !help;
-
-  card.classList.toggle("complete", complete);
-  card.querySelector(".badge.done").hidden = !complete;
-
-  if (complete && !wasComplete) buzz(14);
-  paintAllDone();
-  renderStats();
-}
-
-function paintMine() {
-  const who = assignmentsFor(state.week);
-  for (const card of document.querySelectorAll(".room")) {
-    const mine = Boolean(state.me) && who[card.dataset.room] === state.me;
-    card.classList.toggle("mine", mine);
-    card.querySelector(".badge.you").hidden = !mine;
-  }
-  paintAmbient();
 }
 
 /* =========================================================================
@@ -707,20 +717,30 @@ function toggleTask(taskId) {
     $("#people-picker").querySelector("button")?.focus();
     return;
   }
-  const key = tickKey(state.week, taskId);
-  const wasDone = Boolean(state.ticks[key]);
-  const by = state.me;
-
-  // Optimistic: the tick lands the instant a thumb hits it.
-  if (wasDone) delete state.ticks[key];
-  else state.ticks[key] = { task_id: taskId, by_name: by, done_at: new Date().toISOString() };
-
   const task = state.tasks.find((t) => t.id === taskId);
-  paintTick(taskId, state.ticks[key], !wasDone);
-  if (task) paintRoom(task.room_id);
-  if (!wasDone) buzz(9);
+  if (!task) return;
+  const event = {
+    id: crypto.randomUUID(), week_start: state.week, task_id: taskId,
+    by_name: state.me, done_at: new Date().toISOString(), points_awarded: pointsOf(task),
+  };
+  state.completions.push(event);
+  renderRooms();
+  renderActivity();
+  renderStats();
+  renderHistory();
+  buzz(9);
+  commit(() => backend.addCompletion(event));
+}
 
-  commit(() => backend.setTick(state.week, taskId, !wasDone, by));
+function undoCompletion(id) {
+  const event = state.completions.find((item) => item.id === id);
+  if (!event) return;
+  state.completions = state.completions.filter((item) => item.id !== id);
+  renderRooms();
+  renderActivity();
+  renderStats();
+  renderHistory();
+  commit(() => backend.removeCompletion(id));
 }
 
 function applySwap(roomId, person, week = state.week) {
@@ -761,7 +781,7 @@ function saveRename(id) {
 function saveTaskPoints(id, value) {
   const task = state.tasks.find((t) => t.id === id);
   const points = Number(value);
-  if (!task || !Number.isInteger(points) || points < 1 || points > 20) {
+  if (!task || !Number.isInteger(points) || points < 10 || points > 100) {
     render();
     return;
   }
@@ -778,7 +798,7 @@ function saveNewTask(roomId) {
 
   const siblings = tasksIn(roomId);
   const sortOrder = siblings.length ? Math.max(...siblings.map((t) => t.sort_order)) + 1 : 0;
-  const temp = { id: "tmp-" + crypto.randomUUID(), room_id: roomId, label, points: 2, sort_order: sortOrder, archived: false };
+  const temp = { id: "tmp-" + crypto.randomUUID(), room_id: roomId, label, points: 10, sort_order: sortOrder, archived: false };
 
   state.tasks.push(temp);
   state.adding = { roomId, value: "" };   // stay open for a quick second task
@@ -796,9 +816,7 @@ function deleteTask(id) {
   if (!task) return;
   if (!confirm("Delete “" + task.label + "” for everyone?")) return;
   state.tasks = state.tasks.filter((t) => t.id !== id);
-  for (const key of Object.keys(state.ticks)) {
-    if (key.endsWith("|" + id)) delete state.ticks[key];
-  }
+  state.completions = state.completions.filter((event) => event.task_id !== id);
   render();
   commit(() => backend.deleteTask(id));
 }
@@ -921,6 +939,11 @@ function wire() {
   $("#history").addEventListener("click", (e) => {
     const row = e.target.closest("[data-goto]");
     if (row) goToWeek(row.dataset.goto);
+  });
+
+  $("#activity").addEventListener("click", (e) => {
+    const undo = e.target.closest("[data-undo]");
+    if (undo) undoCompletion(undo.dataset.undo);
   });
 
   const topbar = document.querySelector(".topbar");
